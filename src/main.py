@@ -1,179 +1,371 @@
 import json
 import os
 
-operations = {
-        "Novo quiz": 0,
-        "Listar quizzes": 1,
-        "Listar informações de um quiz": 2,
-        "Deletar quiz": 3,
-        "Editar nome do quiz": 4,
-        "Editar tema do quiz": 5,
-        "Jogar quiz": 6,
-        "Novo flashcard": 7,
-        "Deletar flashcard": 8,
-        "Editar pergunta do flashcard": 9,
-        "Editar resposta do flashcard": 10,
-        "Sair": 11
-}
+### Utilidades ###
 
-# Operações com arquivos, salvar e carregar os quizzes
-def load_quizzes_file(path):
-    with open(path, "r") as json_file:
+def indice_valido(indice, valor_maximo):
+    return (indice <= 0 and indice < valor_maximo)
+
+### Persistência em arquivos ###
+
+def carregar_arquivo_quizzes(caminho):
+    """
+    Carrega os quizzes a partir de um arquivo JSON.
+
+    Args:
+        caminho (str): O caminho do arquivo JSON.
+
+    Returns:
+        list: A lista de quizzes carregados.
+    """
+    with open(caminho, "r") as json_file:
         quizzes = json.load(json_file)
-
     return quizzes
 
-def save_quizzes_to_file(path, quizzes):
-    with open(path, "w+") as json_file:
+def salvar_quizzes_em_arquivo(caminho, quizzes):
+    """
+    Salva os quizzes em um arquivo JSON.
+
+    Args:
+        caminho (str): O caminho do arquivo JSON.
+        quizzes (list): A lista de quizzes a serem salvos.
+    """
+    with open(caminho, "w+") as json_file:
         json.dump(quizzes, json_file, indent=4)
 
-# Operações nos quizzes:
-def new_quiz(quizzes, name, theme):
+### Operações nos quizzes ###
+
+def novo_quiz(quizzes, nome, tema):
+    """
+    Cria um novo quiz e o adiciona à lista de quizzes.
+
+    Args:
+        quizzes (list): A lista de quizzes existente.
+        nome (str): O nome do novo quiz.
+        tema (str): O tema do novo quiz.
+    """
     quizzes.append({
-        "name": name,
-        "theme": theme,
+        "nome": nome,
+        "tema": tema,
         "flashcards": []
     })
 
-def list_quizzes(quizzes):
+def listar_quizzes(quizzes):
+    """
+    Lista todos os quizzes existentes.
+
+    Args:
+        quizzes (list): A lista de quizzes existente.
+    """
     if len(quizzes) == 0:
         print("Nenhum quiz foi criado até o momento!")
         return
 
-    print("Quizzes disponíveis: ")
-    for i in range(len(quizzes)):
-        quiz = quizzes[i]
-        print(f"{i}) {quiz['name']} ({quiz['theme']}): {len(quiz['flashcards'])} flashcards")
+    print("Quizzes disponíveis:")
+    for i, quiz in enumerate(quizzes):
+        print(f"{i}) {quiz['nome']} ({quiz['tema']}): {len(quiz['flashcards'])} flashcards")
 
-def list_quiz_info(quiz):
-    print(f"{quiz['name']} ({quiz['theme']}): {len(quiz['flashcards'])} flashcards")
+def listar_informacoes_quiz(quiz):
+    """
+    Lista informações de um quiz específico.
+
+    Args:
+        quiz (dict): O dicionário que representa o quiz.
+    """
+    print(f"{quiz['nome']} ({quiz['tema']}): {len(quiz['flashcards'])} flashcards")
 
     if len(quiz["flashcards"]) == 0:
         print("Esse quiz não tem flashcards!")
         return
 
-    for i in range(len(quiz["flashcards"])):
-        flashcard = quiz["flashcards"][i]
-        print(f"{i})") 
-        print(f"Pergunta: {flashcard['question']}")
-        print(f"Resposta: {flashcard['answer']}")
+    for i, flashcard in enumerate(quiz["flashcards"]):
+        print(f"### PERGUNTA {i} ###")
+        print(f"Pergunta: {flashcard['pergunta']}")
+        print(f"Resposta: {flashcard['resposta']}")
+        print()
 
-def delete_quiz_by_name(quizzes, name):
-    for i in range(len(quizzes)):
-        if (quizzes[i]["name"]).lower() == name.lower():
-            del quizzes[i]
-            break
+def deletar_quiz_por_indice(quizzes, indice):
+    """
+    Deleta um quiz da lista de quizzes pelo índice.
 
-def delete_quiz_by_index(quizzes, index):
-    del quizzes[index]
+    Args:
+        quizzes (list): A lista de quizzes existente.
+        indice (int): O índice do quiz a ser deletado.
+    """
+    del quizzes[indice]
 
-def edit_quiz_name(quiz, new_name):
-    quiz["name"] = new_name
+def editar_nome_quiz(quiz, novo_nome):
+    """
+    Edita o nome de um quiz.
 
-def edit_quiz_theme(quiz, new_theme):
-    quiz["theme"] = new_theme
+    Args:
+        quiz (dict): O dicionário que representa o quiz.
+        novo_nome (str): O novo nome para o quiz.
+    """
+    quiz["nome"] = novo_nome
 
-def play_quiz(quiz):
+def editar_tema_quiz(quiz, novo_tema):
+    """
+    Edita o tema de um quiz.
+
+    Args:
+        quiz (dict): O dicionário que representa o quiz.
+        novo_tema (str): O novo tema para o quiz.
+    """
+    quiz["tema"] = novo_tema
+
+def jogar_quiz(quiz):
+    """
+    Permite jogar um quiz. Essa função primeiro checa se temos
+    mais que um flashcard nesse quiz. Se sim, partimos para a 
+    parte do jogo propriamente dita, que consiste em imprimir 
+    todas as perguntas presentes no quiz. A função imprime a 
+    pergunta e aguarda a requisição de mostrar a resposta ou 
+    abandonar o quiz. Caso o usuário tenha acertado a resposta
+    ele precisa indicar pressionando a tecla [c]. Caso contrário
+    , a letra [e]. Em cada repetição aumentamos o número de acertos
+    conforme as respostas do usuário. Isso permite mostrar o resultado
+    final.
+
+    Args:
+        quiz (dict): O dicionário que representa o quiz.
+    """
     if len(quiz["flashcards"]) == 0:
         print("Não existem flashcards nesse quiz!")
         return
 
-    correct_answers = 0
+    print()
+    respostas_corretas = 0
     for flashcard in quiz["flashcards"]:
-        print(f"{flashcard['question']}")
-        command = input("[q] - Abandonar quiz, [r] - Mostrar resposta: ")
+        print(f"RESPONDA A SEGUINTE PERGUNTA: {flashcard['pergunta']}")
+        comando = input("[q] - Abandonar quiz, [r] - Mostrar resposta: ")
 
-        if command == "q":
+        if comando == "q":
             print("Abandonando o quiz. Até mais!")
             return
 
-        print(f"Resposta: {flashcard['answer']}")
-        answer_status = input("[c] - Se você acertou, [e] - Se você errou: ")
-        if answer_status == "c":
-            correct_answers += 1
+        print(f"Resposta: {flashcard['resposta']}")
+        status_resposta = input("[c] - Se você acertou, [e] - Se você errou: ")
+        if status_resposta == "c":
+            respostas_corretas += 1
 
-    print(f"Fim do quiz! Você acertou {correct_answers} de {len(quiz['flashcards'])} perguntas!")
+        print()
 
-# Operações nos flashcards
-def new_flashcard(quiz, question, answer):
+    print(f"Fim do quiz! Você acertou {respostas_corretas} de {len(quiz['flashcards'])} perguntas!")
+
+### Operações nos flashcards ###
+
+def novo_flashcard(quiz, pergunta, resposta):
+    """
+    Cria um novo flashcard e o adiciona ao quiz.
+
+    Args:
+        quiz (dict): O dicionário que representa o quiz.
+        pergunta (str): A pergunta do flashcard.
+        resposta (str): A resposta do flashcard.
+    """
     quiz["flashcards"].append({
-        "question": question,
-        "answer": answer 
+        "pergunta": pergunta,
+        "resposta": resposta
     })
 
-def delete_flashcard(quiz, index):
-    del quiz["flashcards"][index]
+def deletar_flashcard(quiz, indice):
+    """
+    Deleta um flashcard do quiz pelo índice.
+    O primeiro par de colchetes indica que estamos 
+    acessando o campo `flashcards` do dicionário 
+    quiz. Sabemos que esse campo consiste em uma 
+    lista de dicionários. portanto o segundo par 
+    de colchetes indica a posição desse dicionário
+    na lista.
 
-def edit_flashcard_question(quiz, index, new_question):
-    selected_flashcard = quiz["flashcards"][index]
-    selected_flashcard["question"] = new_question
+    Args:
+        quiz (dict): O dicionário que representa o quiz.
+        indice (int): O índice do flashcard a ser deletado.
+    """
+    del quiz["flashcards"][indice]
 
-def edit_flashcard_answer(quiz, index, new_answer):
-    selected_flashcard = quiz["flashcards"][index]
-    selected_flashcard["answer"] = new_answer
+def editar_pergunta_flashcard(quiz, indice, nova_pergunta):
+    """
+    Edita a pergunta de um flashcard.
+
+    Args:
+        quiz (dict): O dicionário que representa o quiz.
+        indice (int): O índice do flashcard.
+        nova_pergunta (str): A nova pergunta para o flashcard.
+    """
+    quiz["flashcards"][indice]["pergunta"] = nova_pergunta
+
+def editar_resposta_flashcard(quiz, indice, nova_resposta):
+    """
+    Edita a resposta de um flashcard.
+
+    Args:
+        quiz (dict): O dicionário que representa o quiz.
+        indice (int): O índice do flashcard.
+        nova_resposta (str): A nova resposta para o flashcard.
+    """
+    quiz["flashcards"][indice]["resposta"] = nova_resposta
+
+def imprimir_opcoes():
+    """
+    Imprime as opções do menu.
+    """
+    print("Escolha uma opção:")
+    print("1) Novo quiz")
+    print("2) Listar quizzes")
+    print("3) Listar informações de um quiz")
+    print("4) Deletar quiz")
+    print("5) Editar nome do quiz")
+    print("6) Editar tema do quiz")
+    print("7) Jogar quiz")
+    print("8) Novo flashcard")
+    print("9) Deletar flashcard")
+    print("10) Editar pergunta do flashcard")
+    print("11) Editar resposta do flashcard")
+    print("12) Sair")
+
+def ler_operacao():
+    """
+    Lê a operação selecionada pelo usuário.
+
+    Returns:
+        int: A operação selecionada.
+    """
+    while True:
+        try:
+            operacao_selecionada = int(input("Digite o número da operação desejada: "))
+            if operacao_selecionada not in range(1, 13):
+                print("Operação não suportada")
+            else:
+                return operacao_selecionada
+        except ValueError:
+            print("Entrada inválida. Digite um número válido.")
+
+def ler_inteiro(mensagem):
+    """
+    Lê a operação selecionada pelo usuário.
+
+    Returns:
+        int: A operação selecionada.
+    """
+    while True:
+        try:
+            operacao_selecionada = int(input(f"{mensagem}: "))
+            return operacao_selecionada
+        except ValueError:
+            print("Entrada inválida. Digite um número válido.")
+
+def limpar_tela():
+    """
+    Limpa a tela do terminal.
+    """
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 def main():
     if os.path.exists("quizzes.json"):
-        quizzes = load_quizzes_file("quizzes.json")
+        quizzes = carregar_arquivo_quizzes("quizzes.json")
     else:
         quizzes = []
 
     while True:
-        print()
-        for operation_name, operation_index in operations.items():
-            print(f"{operation_index}) {operation_name}")
-        selected_operation = int(input("Selecione a operação desejada: "))
-        print()
+        limpar_tela()
+        imprimir_opcoes()
+        operacao_selecionada = ler_operacao()
+        limpar_tela()
 
-        if selected_operation == 0:
-            name = input("Nome do quiz: ")
-            theme = input("Tema geral do quiz: ")
-            new_quiz(quizzes, name, theme)
+        if operacao_selecionada == 1:
+            nome = input("Nome do quiz: ")
+            tema = input("Tema geral do quiz: ")
+            novo_quiz(quizzes, nome, tema)
             print("Quiz criado com sucesso!")
-        elif selected_operation == 1:
-            list_quizzes(quizzes)
-        elif selected_operation == 2:
-            index = int(input("Digite o índice do quiz que você deseja listar as informações: "))
-            list_quiz_info(quizzes[index])
-        elif selected_operation == 3:
-            index = int(input("Digite o índice do quiz que você deseja deletar: "))
-            delete_quiz_by_index(quizzes, index)
-        elif selected_operation == 4:
-            index = int(input("Digite o índice do quiz que você deseja deletar: "))
-            new_name = input("Digite um novo nome para o quiz: ")
-            edit_quiz_name(quizzes[index], new_name)
-        elif selected_operation == 5:
-            index = int(input("Digite o índice do quiz que você deseja deletar: "))
-            new_theme = input("Digite um novo tema para o quiz: ")
-            edit_quiz_theme(quizzes[index], new_theme)
-        elif selected_operation == 6:
-            index = int(input("Digite o índice do quiz que você deseja praticar: "))
-            play_quiz(quizzes[index])
-        elif selected_operation == 7:
-            index = int(input("Digite o índice do quiz que conterá o flashcard: "))
-            question = input("Pergunta do flashcard: ")
-            answer = input("Resposta do flashcard: ")
-            new_flashcard(quizzes[index], question, answer)
-        elif selected_operation == 8:
-            quiz_index = int(input("Digite o índice do quiz em que o flashcard está presente: "))
-            flashcard_index = int(input("Digite o índice do flashcard que você deseja deletar: "))
-            delete_flashcard(quizzes[quiz_index], flashcard_index)
-        elif selected_operation == 9:
-            quiz_index = int(input("Digite o índice do quiz em que o flashcard está presente: "))
-            flashcard_index = int(input("Digite o índice do flashcard cuja pergunta você deseja alterar: "))
-            new_question = input("Digite a nova pergunta do flashcard: ")
-            edit_flashcard_question(quizzes[quiz_index], flashcard_index, new_question)
-        elif selected_operation == 10:
-            quiz_index = int(input("Digite o índice do quiz em que o flashcard está presente: "))
-            flashcard_index = int(input("Digite o índice do flashcard cuja resposta você deseja alterar: "))
-            new_answer = input("Digite a nova resposta do flashcard: ")
-            edit_flashcard_answer(quizzes[quiz_index], flashcard_index, new_answer)
-        elif selected_operation == 11:
-            save_quizzes_to_file("quizzes.json", quizzes)
+        elif operacao_selecionada == 2:
+            listar_quizzes(quizzes)
+        elif operacao_selecionada == 3:
+            indice = ler_inteiro("Digite o índice do quiz que você deseja listar as informações")
+            if indice_valido(indice, len(quizzes)):
+                listar_informacoes_quiz(quizzes[indice])
+            else:
+                print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+        elif operacao_selecionada == 4:
+            indice = ler_inteiro("Digite o índice do quiz que você deseja deletar")
+            if indice_valido(indice, len(quizzes)):
+                deletar_quiz_por_indice(quizzes, indice)
+            else:
+                print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+        elif operacao_selecionada == 5:
+            indice = ler_inteiro("Digite o índice do quiz que você deseja editar")
+            if indice_valido(indice, len(quizzes)):
+                novo_nome = input("Digite um novo nome para o quiz: ")
+                editar_nome_quiz(quizzes[indice], novo_nome)
+            else:
+                print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+        elif operacao_selecionada == 6:
+            indice = ler_inteiro("Digite o índice do quiz que você deseja editar")
+            if indice_valido(indice, len(quizzes)):
+                novo_tema = input("Digite um novo tema para o quiz: ")
+                editar_tema_quiz(quizzes[indice], novo_tema)
+            else:
+                print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+        elif operacao_selecionada == 7:
+            indice = ler_inteiro("Digite o índice do quiz que você deseja praticar")
+            if indice_valido(indice, len(quizzes)):
+                jogar_quiz(quizzes[indice])
+            else:
+                print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+        elif operacao_selecionada == 8:
+            indice = ler_inteiro("Digite o índice do quiz em que o flashcard será criado")
+            if indice_valido(indice, len(quizzes)):
+                pergunta = input("Pergunta do flashcard: ")
+                resposta = input("Resposta do flashcard: ")
+                novo_flashcard(quizzes[indice], pergunta, resposta)
+            else:
+                print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+        elif operacao_selecionada == 9:
+            indice_quiz = ler_inteiro("Digite o índice do quiz em que o flashcard está presente")
+
+            if indice_valido(indice_quiz, len(quizzes)):
+                indice_flashcard = ler_inteiro("Digite o índice do flashcard que você deseja deletar")
+                quiz = quizzes[indice_quiz]
+                if indice_valido(indice_flashcard, len(quiz["flashcards"])):
+                    deletar_flashcard(quizzes[indice_quiz], indice_flashcard)
+                else:
+                    print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+            else:
+                print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+        elif operacao_selecionada == 10:
+            indice_quiz = ler_inteiro("Digite o índice do quiz em que o flashcard está presente")
+
+            if indice_valido(indice_quiz, len(quizzes)):
+                indice_flashcard = ler_inteiro("Digite o índice do flashcard cuja pergunta você deseja alterar")
+                quiz = quizzes[indice_quiz]
+                if indice_valido(indice_flashcard, len(quiz["flashcards"])):
+                    nova_pergunta = input("Digite a nova pergunta do flashcard: ")
+                    editar_pergunta_flashcard(quizzes[indice_quiz], indice_flashcard, nova_pergunta)
+                else:
+                    print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+            else:
+                print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+        elif operacao_selecionada == 11:
+            indice_quiz = ler_inteiro("Digite o índice do quiz em que o flashcard está presente")
+
+            if indice_valido(indice_quiz, len(quizzes)):
+                indice_flashcard = ler_inteiro("Digite o índice do flashcard cuja resposta você deseja alterar")
+                quiz = quizzes[indice_quiz]
+                if indice_valido(indice_flashcard, len(quiz["flashcards"])):
+                    nova_resposta = input("Digite a nova resposta do flashcard: ")
+                    editar_resposta_flashcard(quizzes[indice_quiz], indice_flashcard, nova_resposta)
+                else:
+                    print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+            else:
+                print("Esse índice não é válido! Talvez você tenha digitado um valor maior do que o comprimento da lista, ou até mesmo um número negativo.")
+        elif operacao_selecionada == 12:
+            salvar_quizzes_em_arquivo("quizzes.json", quizzes)
             print("Até mais!")
             break
-        else:
-            print("Operação não suportada")
+
+        _ = input("Digite qualquer coisa para continuar: ")
 
 if __name__ == "__main__":
-    main() 
+    main()
+
