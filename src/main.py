@@ -4,13 +4,29 @@ import os
 ### Utilidades ###
 
 def indice_valido(indice, valor_maximo):
+    """
+    Checa se o valor de `indice` está dentro do intervalo
+    0 <= indice < valor_maximo
+
+    Args:
+        indice (int): O indice que você deseja checar
+        valor_maximo (int): O valor máximo que vai ser utilizado na comparação
+
+    Returns:
+        bool: True se o indice for válido, False se não.
+    """
     return (indice <= 0 and indice < valor_maximo)
 
 ### Persistência em arquivos ###
 
 def carregar_arquivo_quizzes(caminho):
     """
-    Carrega os quizzes a partir de um arquivo JSON.
+    Carrega os quizzes a partir de um arquivo JSON. Primeiro 
+    utilizamos a keyword with, que permite que abramos um arquivo
+    no sistema. Essa estrutura fecha o arquivo logo após a utlização.
+    Após isso utilizamos a função `load()` da biblioteca nativa json.
+    Essa função fará a leitura do arquivo no formato especificado, e 
+    retornará a leitura na variável `quizzes`.
 
     Args:
         caminho (str): O caminho do arquivo JSON.
@@ -24,7 +40,15 @@ def carregar_arquivo_quizzes(caminho):
 
 def salvar_quizzes_em_arquivo(caminho, quizzes):
     """
-    Salva os quizzes em um arquivo JSON.
+    Salva os quizzes em um arquivo JSON. Assim como na função
+    `carregar_arquivo_quizzes`, essa função também utiliza a 
+    keyword with. Nesse caso, apenas devemos persistir as informações 
+    dos quizzes e nada mais. É isso que a função `dump` faz. Se tivermos
+    dados que respeitem o formato json, basta chamar essa função com 
+    nossa estrutura e o nome do arquivo para persistir os dados gerados
+    durante a utiliação da aplicação. O argumento `indent=4` está 
+    presente por questões de legibilidade. Ele especifica o nível 
+    de indentação no arquivo json.
 
     Args:
         caminho (str): O caminho do arquivo JSON.
@@ -37,7 +61,12 @@ def salvar_quizzes_em_arquivo(caminho, quizzes):
 
 def novo_quiz(quizzes, nome, tema):
     """
-    Cria um novo quiz e o adiciona à lista de quizzes.
+    Cria um novo quiz e o adiciona à lista de quizzes. Utiliza 
+    a função append, já que temos uma lista de quizzes composta
+    por dicionários. Especificamos os campos que gostaríamos de 
+    adicionar em cada novo quiz e também inicializamos esse mesmo 
+    dicionário com uma lista vazia representando os flashcards, já
+    que estes serão criados depois.
 
     Args:
         quizzes (list): A lista de quizzes existente.
@@ -52,7 +81,11 @@ def novo_quiz(quizzes, nome, tema):
 
 def listar_quizzes(quizzes):
     """
-    Lista todos os quizzes existentes.
+    Lista todos os quizzes existentes. Caso não existam quizzes,
+    o programa também mostra uma mensagem indicando essa situação.
+    Se houverem quizzes, basta utilizar um laço for para percorrer a lista 
+    e uma chamada para a função `print`. Imprimimos o índice, nome, tema 
+    e quantidade de flashcards presentes em cada quiz.
 
     Args:
         quizzes (list): A lista de quizzes existente.
@@ -67,7 +100,10 @@ def listar_quizzes(quizzes):
 
 def listar_informacoes_quiz(quiz):
     """
-    Lista informações de um quiz específico.
+    Lista informações de um quiz específico. Essa função
+    complementa `listar_quizzes` de maneira que lista todas os 
+    flashcards de um quiz selecionado, junto com as informações 
+    nome, tema e quantidade de flashcards.
 
     Args:
         quiz (dict): O dicionário que representa o quiz.
@@ -87,6 +123,8 @@ def listar_informacoes_quiz(quiz):
 def deletar_quiz_por_indice(quizzes, indice):
     """
     Deleta um quiz da lista de quizzes pelo índice.
+    A keyword `del` é utilizada em python para deletar 
+    um dicionário.
 
     Args:
         quizzes (list): A lista de quizzes existente.
@@ -96,7 +134,8 @@ def deletar_quiz_por_indice(quizzes, indice):
 
 def editar_nome_quiz(quiz, novo_nome):
     """
-    Edita o nome de um quiz.
+    Edita o nome de um quiz. Buscamos o campo `nome` 
+    e atribuímos o seu novo valor.
 
     Args:
         quiz (dict): O dicionário que representa o quiz.
@@ -106,7 +145,8 @@ def editar_nome_quiz(quiz, novo_nome):
 
 def editar_tema_quiz(quiz, novo_tema):
     """
-    Edita o tema de um quiz.
+    Edita o tema de um quiz. Buscamos o campo `tema` 
+    e atribuímos o seu novo valor.
 
     Args:
         quiz (dict): O dicionário que representa o quiz.
@@ -158,6 +198,9 @@ def jogar_quiz(quiz):
 def novo_flashcard(quiz, pergunta, resposta):
     """
     Cria um novo flashcard e o adiciona ao quiz.
+    a lista de flashcards se encontra no campo `flashcards` 
+    de um determinado quiz. Basta adicionarmos o nosso novo dicionário 
+    com as informações de uma pergunta nessa lista.
 
     Args:
         quiz (dict): O dicionário que representa o quiz.
@@ -187,18 +230,21 @@ def deletar_flashcard(quiz, indice):
 
 def editar_pergunta_flashcard(quiz, indice, nova_pergunta):
     """
-    Edita a pergunta de um flashcard.
+    Edita a pergunta de um flashcard. Acessamos o campo `flashcards`
+    no determinado indice, e depois alteramos a o campo `pergunta`
 
     Args:
         quiz (dict): O dicionário que representa o quiz.
         indice (int): O índice do flashcard.
         nova_pergunta (str): A nova pergunta para o flashcard.
     """
-    quiz["flashcards"][indice]["pergunta"] = nova_pergunta
+    flashcard = quiz["flashcards"][indice]
+    flashcard["pergunta"] = nova_pergunta
 
 def editar_resposta_flashcard(quiz, indice, nova_resposta):
     """
-    Edita a resposta de um flashcard.
+    Edita a resposta de um flashcard. Acessamos o campo `flashcards`
+    no determinado indice, e depois alteramos a o campo `resposta`
 
     Args:
         quiz (dict): O dicionário que representa o quiz.
@@ -227,7 +273,16 @@ def imprimir_opcoes():
 
 def ler_operacao():
     """
-    Lê a operação selecionada pelo usuário.
+    Lê a operação selecionada pelo usuário. A expressão `while True`
+    simboliza um loop infinito, que apenas será abandonado quando o
+    usuário digitar um número válido de operação. O try/catch nos 
+    mostra como o Python lida com as chamadas exceções, que são 
+    erros que acontecem em nosso código que podem ser recuperados.
+    A exceção que estamos tentando "pegar" é a `ValueError`, que 
+    indica que o valor fornecido como entrada é inválido. Quando 
+    essa exceção cair no bloco `catch`, imprimimos uma mensagem 
+    de ajuda e o código novamente pede um dado de entrada, até que 
+    esse seja válido.
 
     Returns:
         int: A operação selecionada.
@@ -244,7 +299,8 @@ def ler_operacao():
 
 def ler_inteiro(mensagem):
     """
-    Lê a operação selecionada pelo usuário.
+    Lê a operação selecionada pelo usuário, utilizando o conceito de 
+    try/catch comentado na função `ler_operacao`.
 
     Returns:
         int: A operação selecionada.
